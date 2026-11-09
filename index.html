@@ -81,3 +81,39 @@
       container.innerHTML = molochkaItems.map(item => `
         <div class="item-row">
           <label><input type="checkbox" data-item="${item}"> ${item}</label>
+          <input type="number" data-qty="${item}" placeholder="Залишок">
+        </div>
+      `).join('');
+    }
+
+    function renderChecklist(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = items.map(item => `
+        <div class="item-row">
+          <label><input type="checkbox" data-item="${item}"> ${item}</label>
+        </div>
+      `).join('');
+    }
+
+    function filterItems(type) {
+      const query = document.getElementById(`search-${type}`).value.toLowerCase();
+      const rows = document.querySelectorAll(`#${type}-list .item-row`);
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+    }
+
+    function switchTab(evt, tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      evt.currentTarget.classList.add('active');
+    }
+
+    function sendData(type) {
+      let payload = { type: type, data: {} };
+      
+      if (type === 'molochka') {
+        document.querySelectorAll('#molochka-list input[type="checkbox"]:checked').forEach(cb => {
+          const itemName = cb.dataset.item
