@@ -15,27 +15,25 @@
     .card { background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
     .item-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
     .item-row:last-child { border-bottom: none; }
-    input[type="number"] { width: 70px; padding: 5px; text-align: center; border: 1px solid #cbd5e0; border-radius: 5px; }
+    .item-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
+    input[type="number"] { width: 80px; padding: 5px; text-align: center; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 14px; }
     input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 5px; margin-bottom: 8px; }
     .submit-btn { width: 100%; padding: 12px; background: #38a169; color: white; font-weight: bold; border: none; border-radius: 8px; margin-top: 15px; font-size: 16px; cursor: pointer; }
-    .suggestions { background: #fff; border: 1px solid #cbd5e0; border-radius: 5px; max-height: 120px; overflow-y: auto; display: none; }
-    .suggestion-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #edf2f7; }
-    .suggestion-item:hover { background: #ebf8ff; }
   </style>
 </head>
 <body>
 
   <div class="nav">
-    <button class="tab-btn active" onclick="switchTab('molochka')">🥛 Молочка</button>
-    <button class="tab-btn" onclick="switchTab('prod')">🍎 Продукти</button>
-    <button class="tab-btn" onclick="switchTab('upak')">📦 Упаковка</button>
+    <button class="tab-btn active" onclick="switchTab(event, 'molochka')">🥛 Молочка</button>
+    <button class="tab-btn" onclick="switchTab(event, 'prod')">🍎 Продукти</button>
+    <button class="tab-btn" onclick="switchTab(event, 'upak')">📦 Упаковка</button>
   </div>
 
   <!-- Вкладка 1: Молочка та бакалія -->
   <div id="tab-molochka" class="tab-content active">
-    <h3>🥛 Залишки (Вівторок / П'ятниця)</h3>
+    <h3>🥛 Молочка та Бакалія (Вт / Пт)</h3>
     <div class="card" id="molochka-list"></div>
-    <button class="submit-btn" onclick="sendData('molochka')">Надіслати залишки молочки</button>
+    <button class="submit-btn" onclick="sendData('molochka')">Надіслати молочку</button>
   </div>
 
   <!-- Вкладка 2: Продукти та начинки -->
@@ -82,55 +80,4 @@
       const container = document.getElementById('molochka-list');
       container.innerHTML = molochkaItems.map(item => `
         <div class="item-row">
-          <span>${item}</span>
-          <input type="number" data-item="${item}" placeholder="0">
-        </div>
-      `).join('');
-    }
-
-    function renderChecklist(containerId, items) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = items.map(item => `
-        <div class="item-row">
           <label><input type="checkbox" data-item="${item}"> ${item}</label>
-        </div>
-      `).join('');
-    }
-
-    function filterItems(type) {
-      const query = document.getElementById(`search-${type}`).value.toLowerCase();
-      const rows = document.querySelectorAll(`#${type}-list .item-row`);
-      rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(query) ? 'flex' : 'none';
-      });
-    }
-
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      document.getElementById(`tab-${tab}`).classList.add('active');
-      event.target.classList.add('active');
-    }
-
-    function sendData(type) {
-      let payload = { type: type, data: {} };
-      if (type === 'molochka') {
-        document.querySelectorAll('#molochka-list input').forEach(input => {
-          if (input.value) payload.data[input.dataset.item] = input.value;
-        });
-      } else {
-        const listId = type === 'prod' ? 'prod-list' : 'upak-list';
-        document.querySelectorAll(`#${listId} input[type="checkbox"]:checked`).forEach(cb => {
-          payload.data[cb.dataset.item] = "Потрібно";
-        });
-      }
-      tg.sendData(JSON.stringify(payload));
-    }
-
-    renderMolochka();
-    renderChecklist('prod-list', prodItems);
-    renderChecklist('upak-list', upakItems);
-  </script>
-</body>
-</html>
