@@ -116,4 +116,29 @@
       
       if (type === 'molochka') {
         document.querySelectorAll('#molochka-list input[type="checkbox"]:checked').forEach(cb => {
-          const itemName = cb.dataset.item
+          const itemName = cb.dataset.item;
+          const qtyInput = document.querySelector(`#molochka-list input[data-qty="${itemName}"]`);
+          const qtyVal = qtyInput && qtyInput.value ? qtyInput.value : "Потрібно";
+          payload.data[itemName] = qtyVal;
+        });
+      } else {
+        const listId = type === 'prod' ? 'prod-list' : 'upak-list';
+        document.querySelectorAll(`#${listId} input[type="checkbox"]:checked`).forEach(cb => {
+          payload.data[cb.dataset.item] = "Потрібно";
+        });
+      }
+
+      if (Object.keys(payload.data).length === 0) {
+        alert("Будь ласка, виберіть хоча б одну позицію (поставте галочку)!");
+        return;
+      }
+      
+      tg.sendData(JSON.stringify(payload));
+    }
+
+    renderMolochka();
+    renderChecklist('prod-list', prodItems);
+    renderChecklist('upak-list', upakItems);
+  </script>
+</body>
+</html>
