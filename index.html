@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Закупівлі Пекарні</title>
+  <title>Управління Пекарнею</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #f7f9fb; color: #333; }
-    .nav { display: flex; gap: 5px; margin-bottom: 15px; }
-    .tab-btn { flex: 1; padding: 10px 5px; font-size: 12px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 8px; cursor: pointer; }
+    .nav { display: flex; gap: 4px; margin-bottom: 15px; }
+    .tab-btn { flex: 1; padding: 8px 3px; font-size: 11px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 8px; cursor: pointer; }
     .tab-btn.active { background: #3182ce; color: #fff; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -24,13 +24,21 @@
 <body>
 
   <div class="nav">
-    <button class="tab-btn active" onclick="switchTab(event, 'molochka')">🥛 Молочка</button>
+    <button class="tab-btn active" onclick="switchTab(event, 'vypichka')">🍞 Випічка</button>
+    <button class="tab-btn" onclick="switchTab(event, 'molochka')">🥛 Молочка</button>
     <button class="tab-btn" onclick="switchTab(event, 'prod')">🍎 Продукти</button>
     <button class="tab-btn" onclick="switchTab(event, 'upak')">📦 Упаковка</button>
   </div>
 
+  <!-- Вкладка 0: Звіт по Випічці -->
+  <div id="tab-vypichka" class="tab-content active">
+    <h3>🍞 Звіт за зміну (Випічка)</h3>
+    <div class="card" id="vypichka-list"></div>
+    <button class="submit-btn" onclick="sendData('vypichka')">Надіслати звіт випічки</button>
+  </div>
+
   <!-- Вкладка 1: Молочка та бакалія -->
-  <div id="tab-molochka" class="tab-content active">
+  <div id="tab-molochka" class="tab-content">
     <h3>🥛 Молочка та Бакалія (Вт / Пт)</h3>
     <div class="card" id="molochka-list"></div>
     <button class="submit-btn" onclick="sendData('molochka')">Надіслати молочку</button>
@@ -56,6 +64,11 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
+    const vypichkaItems = [
+      "Хліб білий", "Хліб сірий", "Багет", "Булка з маком", "Булка з повидлом", 
+      "Сосиска в тісті", "Круасан класичний", "Круасан з шоколадом"
+    ];
+
     const molochkaItems = [
       "Сир кисломолочний звичайний", "Сир кисломолочний з родзинками", 
       "Сир твердий", "Сметана", "Масло/маргарин", "Олія", "Кетчуп", "Кукурудза"
@@ -75,6 +88,16 @@
       "Кришки американо д70", "Кришки лате д80", "Серветки барні", "Рушники паперові",
       "Миюче для посуди", "Миюче для підлоги", "Трубочки"
     ];
+
+    function renderVypichka() {
+      const container = document.getElementById('vypichka-list');
+      container.innerHTML = vypichkaItems.map(item => `
+        <div class="item-row">
+          <span>${item}</span>
+          <input type="number" data-vypichka="${item}" placeholder="К-ть">
+        </div>
+      `).join('');
+    }
 
     function renderMolochka() {
       const container = document.getElementById('molochka-list');
@@ -114,7 +137,11 @@
     function sendData(type) {
       let payload = { type: type, data: {} };
       
-      if (type === 'molochka') {
+      if (type === 'vypichka') {
+        document.querySelectorAll('#vypichka-list input').forEach(input => {
+          if (input.value) payload.data[input.dataset.vypichka] = input.value;
+        });
+      } else if (type === 'molochka') {
         document.querySelectorAll('#molochka-list input[type="checkbox"]:checked').forEach(cb => {
           const itemName = cb.dataset.item;
           const qtyInput = document.querySelector(`#molochka-list input[data-qty="${itemName}"]`);
@@ -129,13 +156,14 @@
       }
 
       if (Object.keys(payload.data).length === 0) {
-        alert("Будь ласка, виберіть хоча б одну позицію (поставте галочку)!");
+        alert("Будь ласка, заповніть хоча б одне поле або поставте галочку!");
         return;
       }
       
       tg.sendData(JSON.stringify(payload));
     }
 
+    renderVypichka();
     renderMolochka();
     renderChecklist('prod-list', prodItems);
     renderChecklist('upak-list', upakItems);
