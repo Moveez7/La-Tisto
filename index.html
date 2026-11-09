@@ -1,68 +1,136 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Звіт по випічці</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 15px; background-color: #f4f4f9; color: #333; }
-        h2 { text-align: center; color: #444; }
-        .item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #ddd; }
-        .item label { font-size: 16px; font-weight: bold; }
-        .item input { width: 70px; padding: 5px; font-size: 16px; text-align: center; border: 1px solid #ccc; border-radius: 5px; }
-        .btn-submit { display: block; width: 100%; padding: 12px; font-size: 18px; font-weight: bold; color: white; background-color: #28a745; border: none; border-radius: 8px; margin-top: 20px; cursor: pointer; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Закупівлі Пекарні</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #f7f9fb; color: #333; }
+    .nav { display: flex; gap: 5px; margin-bottom: 15px; }
+    .tab-btn { flex: 1; padding: 10px 5px; font-size: 12px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 8px; cursor: pointer; }
+    .tab-btn.active { background: #3182ce; color: #fff; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .card { background: #fff; padding: 12px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .item-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #edf2f7; }
+    .item-row:last-child { border-bottom: none; }
+    input[type="number"] { width: 70px; padding: 5px; text-align: center; border: 1px solid #cbd5e0; border-radius: 5px; }
+    input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 5px; margin-bottom: 8px; }
+    .submit-btn { width: 100%; padding: 12px; background: #38a169; color: white; font-weight: bold; border: none; border-radius: 8px; margin-top: 15px; font-size: 16px; cursor: pointer; }
+    .suggestions { background: #fff; border: 1px solid #cbd5e0; border-radius: 5px; max-height: 120px; overflow-y: auto; display: none; }
+    .suggestion-item { padding: 8px; cursor: pointer; border-bottom: 1px solid #edf2f7; }
+    .suggestion-item:hover { background: #ebf8ff; }
+  </style>
 </head>
 <body>
-    <h2>🥐 Звіт за зміну</h2>
-    <form id="bakery-form">
-        <div id="items-list"></div>
-        <button type="button" class="btn-submit" onclick="sendData()">Надіслати звіт</button>
-    </form>
 
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
+  <div class="nav">
+    <button class="tab-btn active" onclick="switchTab('molochka')">🥛 Молочка</button>
+    <button class="tab-btn" onclick="switchTab('prod')">🍎 Продукти</button>
+    <button class="tab-btn" onclick="switchTab('upak')">📦 Упаковка</button>
+  </div>
 
-        const items = [
-            "Багет / Бантик", "Біскотті", "Бріош", "Булочка з яблуком", "Бур.булка", 
-            "Ватрушка", "Вишня", "Галета", "Гарбузовий", "Капуста", "Картоха", 
-            "Кекс морквяний", "Кекс шок.кап", "Кекси", "Кільця", "Курино грибні", 
-            "Маковка", "Паляниці", "Персик", "Піца", "Рогалі", "Рулет яблучний", 
-            "Сінабони", "Сосиска", "Сочніки", "Тарт вишня", "Тарт сникерс", 
-            "Тертий", "Цукринка", "Шоколад", "Шоколод.печиво"
-        ];
+  <!-- Вкладка 1: Молочка та бакалія -->
+  <div id="tab-molochka" class="tab-content active">
+    <h3>🥛 Залишки (Вівторок / П'ятниця)</h3>
+    <div class="card" id="molochka-list"></div>
+    <button class="submit-btn" onclick="sendData('molochka')">Надіслати залишки молочки</button>
+  </div>
 
-        const container = document.getElementById('items-list');
+  <!-- Вкладка 2: Продукти та начинки -->
+  <div id="tab-prod" class="tab-content">
+    <h3>🍎 Продукти та Начинки</h3>
+    <input type="text" id="search-prod" placeholder="🔍 Введіть назву для пошуку..." oninput="filterItems('prod')">
+    <div class="card" id="prod-list"></div>
+    <button class="submit-btn" onclick="sendData('prod')">Надіслати список продуктів</button>
+  </div>
 
-        items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'item';
-            div.innerHTML = `
-                <label>${item}</label>
-                <input type="number" id="${item}" placeholder="0" min="0">
-            `;
-            container.appendChild(div);
+  <!-- Вкладка 3: Упаковка та витратники -->
+  <div id="tab-upak" class="tab-content">
+    <h3>📦 Упаковка та витратники</h3>
+    <input type="text" id="search-upak" placeholder="🔍 Введіть назву для пошуку..." oninput="filterItems('upak')">
+    <div class="card" id="upak-list"></div>
+    <button class="submit-btn" onclick="sendData('upak')">Надіслати список упаковки</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const molochkaItems = [
+      "Сир кисломолочний звичайний", "Сир кисломолочний з родзинками", 
+      "Сир твердий", "Сметана", "Масло/маргарин", "Олія", "Кетчуп", "Кукурудза"
+    ];
+
+    const prodItems = [
+      "Яйця", "Сосиски", "Салямі", "Помідори", "Курка", "Гриби", "Картопля", 
+      "Капуста", "Гарбуз", "Апельсин", "Цибуля", "Морква", "Яблука",
+      "Полуниця (Джеми)", "Вишня (Джеми)", "Абрикос (Джеми)", "Мак (Джеми)", 
+      "Смородина (Джеми)", "Шоколад (Джеми)", "Карамель (Джеми)"
+    ];
+
+    const upakItems = [
+      "Стакан еспресо 110мл", "Стакан американо 185мл д70", "Стакан капучино 275мл д80",
+      "Стакан лате 340мл д80", "Мішалки дерев'яні", "Цукор в стіках", "Пакет саше 14х14",
+      "Пакет саше 18х18", "Пакет саше 26х18", "Пакет саше 39х22", "Пакет саше 45х10 (багет)",
+      "Кришки американо д70", "Кришки лате д80", "Серветки барні", "Рушники паперові",
+      "Миюче для посуди", "Миюче для підлоги", "Трубочки"
+    ];
+
+    function renderMolochka() {
+      const container = document.getElementById('molochka-list');
+      container.innerHTML = molochkaItems.map(item => `
+        <div class="item-row">
+          <span>${item}</span>
+          <input type="number" data-item="${item}" placeholder="0">
+        </div>
+      `).join('');
+    }
+
+    function renderChecklist(containerId, items) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = items.map(item => `
+        <div class="item-row">
+          <label><input type="checkbox" data-item="${item}"> ${item}</label>
+        </div>
+      `).join('');
+    }
+
+    function filterItems(type) {
+      const query = document.getElementById(`search-${type}`).value.toLowerCase();
+      const rows = document.querySelectorAll(`#${type}-list .item-row`);
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? 'flex' : 'none';
+      });
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      event.target.classList.add('active');
+    }
+
+    function sendData(type) {
+      let payload = { type: type, data: {} };
+      if (type === 'molochka') {
+        document.querySelectorAll('#molochka-list input').forEach(input => {
+          if (input.value) payload.data[input.dataset.item] = input.value;
         });
+      } else {
+        const listId = type === 'prod' ? 'prod-list' : 'upak-list';
+        document.querySelectorAll(`#${listId} input[type="checkbox"]:checked`).forEach(cb => {
+          payload.data[cb.dataset.item] = "Потрібно";
+        });
+      }
+      tg.sendData(JSON.stringify(payload));
+    }
 
-        function sendData() {
-            let result = {};
-            items.forEach(item => {
-                let val = document.getElementById(item).value;
-                if (val && parseInt(val) > 0) {
-                    result[item] = parseInt(val);
-                }
-            });
-
-            if (Object.keys(result).length === 0) {
-                alert("Будь ласка, введіть кількість хоча б для однієї позиції!");
-                return;
-            }
-
-            tg.sendData(JSON.stringify(result));
-            tg.close();
-        }
-    </script>
+    renderMolochka();
+    renderChecklist('prod-list', prodItems);
+    renderChecklist('upak-list', upakItems);
+  </script>
 </body>
 </html>
