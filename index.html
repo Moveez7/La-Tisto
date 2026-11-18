@@ -7,8 +7,8 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 15px; background: #f7f9fb; color: #333; }
-    .nav { display: flex; gap: 4px; margin-bottom: 15px; }
-    .tab-btn { flex: 1; padding: 8px 3px; font-size: 11px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 8px; cursor: pointer; }
+    .nav { display: flex; gap: 5px; margin-bottom: 15px; }
+    .tab-btn { flex: 1; padding: 10px 5px; font-size: 12px; font-weight: bold; border: none; background: #e2e8f0; border-radius: 8px; cursor: pointer; }
     .tab-btn.active { background: #3182ce; color: #fff; }
     .tab-content { display: none; }
     .tab-content.active { display: block; }
@@ -23,15 +23,15 @@
 </head>
 <body>
 
-  <div class="nav">
-    <button class="tab-btn active" onclick="switchTab(event, 'vypichka')">🍞 Випічка</button>
-    <button class="tab-btn" onclick="switchTab(event, 'molochka')">🥛 Молочка</button>
+  <!-- Навігація тільки для закупівель -->
+  <div class="nav" id="zakup-nav" style="display: none;">
+    <button class="tab-btn active" onclick="switchTab(event, 'molochka')">🥛 Молочка</button>
     <button class="tab-btn" onclick="switchTab(event, 'prod')">🍎 Продукти</button>
     <button class="tab-btn" onclick="switchTab(event, 'upak')">📦 Упаковка</button>
   </div>
 
   <!-- Вкладка 0: Звіт по Випічці -->
-  <div id="tab-vypichka" class="tab-content active">
+  <div id="tab-vypichka" class="tab-content">
     <h3>🍞 Звіт за зміну (Випічка)</h3>
     <div class="card" id="vypichka-list"></div>
     <button class="submit-btn" onclick="sendData('vypichka')">Надіслати звіт випічки</button>
@@ -167,6 +167,17 @@
     renderMolochka();
     renderChecklist('prod-list', prodItems);
     renderChecklist('upak-list', upakItems);
+
+    // Визначаємо, яку кнопку натиснув користувач у боті (?mode=vypichka або ?mode=zakup)
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode');
+
+    if (mode === 'zakup') {
+      document.getElementById('zakup-nav').style.display = 'flex';
+      document.getElementById('tab-molochka').classList.add('active');
+    } else {
+      document.getElementById('tab-vypichka').classList.add('active');
+    }
   </script>
 </body>
 </html>
