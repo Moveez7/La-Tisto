@@ -19,6 +19,7 @@
     input[type="number"] { width: 80px; padding: 5px; text-align: center; border: 1px solid #cbd5e0; border-radius: 5px; font-size: 14px; }
     input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #cbd5e0; border-radius: 5px; margin-bottom: 8px; }
     .submit-btn { width: 100%; padding: 12px; background: #38a169; color: white; font-weight: bold; border: none; border-radius: 8px; margin-top: 15px; font-size: 16px; cursor: pointer; }
+    .submit-btn:disabled { background: #a0aec0; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -34,14 +35,14 @@
   <div id="tab-vypichka" class="tab-content">
     <h3>🍞 Звіт за зміну (Випічка)</h3>
     <div class="card" id="vypichka-list"></div>
-    <button class="submit-btn" onclick="sendData('vypichka')">Надіслати звіт випічки</button>
+    <button class="submit-btn" onclick="sendData('vypichka', this)">Надіслати звіт випічки</button>
   </div>
 
   <!-- Вкладка 1: Молочка та бакалія -->
   <div id="tab-molochka" class="tab-content">
     <h3>🥛 Молочка та Бакалія (Вт / Пт)</h3>
     <div class="card" id="molochka-list"></div>
-    <button class="submit-btn" onclick="sendData('molochka')">Надіслати молочку</button>
+    <button class="submit-btn" onclick="sendData('molochka', this)">Надіслати молочку</button>
   </div>
 
   <!-- Вкладка 2: Продукти та начинки -->
@@ -49,7 +50,7 @@
     <h3>🍎 Продукти та Начинки</h3>
     <input type="text" id="search-prod" placeholder="🔍 Введіть назву для пошуку..." oninput="filterItems('prod')">
     <div class="card" id="prod-list"></div>
-    <button class="submit-btn" onclick="sendData('prod')">Надіслати список продуктів</button>
+    <button class="submit-btn" onclick="sendData('prod', this)">Надіслати список продуктів</button>
   </div>
 
   <!-- Вкладка 3: Упаковка та витратники -->
@@ -57,10 +58,11 @@
     <h3>📦 Упаковка та витратники</h3>
     <input type="text" id="search-upak" placeholder="🔍 Введіть назву для пошуку..." oninput="filterItems('upak')">
     <div class="card" id="upak-list"></div>
-    <button class="submit-btn" onclick="sendData('upak')">Надіслати список упаковки</button>
+    <button class="submit-btn" onclick="sendData('upak', this)">Надіслати список упаковки</button>
   </div>
 
   <script>
+    const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxMoICrxOITLYXD1Z1DgQhpgXXpHxtLhw94fxEeItdApncj_d2bGRtJOILMEZqogLLe/exec";
     const tg = window.Telegram.WebApp;
     tg.expand();
 
@@ -138,7 +140,7 @@
       evt.currentTarget.classList.add('active');
     }
 
-    function sendData(type) {
+    async function sendData(type, btn) {
       let payload = { type: type, data: {} };
       
       if (type === 'vypichka') {
@@ -163,8 +165,33 @@
         alert("Будь ласка, заповніть хоча б одне поле або поставте галочку!");
         return;
       }
-      
-      tg.sendData(JSON.stringify(payload));
+
+      // Додаємо ім'я працівника з Telegram
+      const user = tg.initDataUnsafe?.user;
+      payload.user = user ? [user.first_name, user.last_name].filter(Boolean).join(" ") : "Працівник";
+
+      // Якщо запущено через Direct Link з групи (або без клавіатури бота) — відправляємо на Google Webhook
+      if (tg.initDataUnsafe?.start_param || !tg.initData) {
+        const origText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "⏳ Відправка...";
+        try {
+          await fetch(WEBHOOK_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          tg.close();
+        } catch (e) {
+          btn.disabled = false;
+          btn.innerText = origText;
+          alert("Помилка під час відправки: " + e);
+        }
+      } else {
+        // Класична відправка, якщо форму відкрито в особистому чаті з ботом
+        tg.sendData(JSON.stringify(payload));
+      }
     }
 
     renderVypichka();
@@ -172,9 +199,10 @@
     renderChecklist('prod-list', prodItems);
     renderChecklist('upak-list', upakItems);
 
-    // Визначаємо, яку кнопку натиснув користувач у боті (?mode=vypichka або ?mode=zakup)
+    // Визначаємо режим: з Direct Link (?tgWebAppStartParam=...) або зі звичайної кнопки (?mode=...)
     const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode');
+    const startParam = tg.initDataUnsafe?.start_param || urlParams.get('tgWebAppStartParam');
+    const mode = startParam || urlParams.get('mode');
 
     if (mode === 'zakup') {
       document.getElementById('zakup-nav').style.display = 'flex';
